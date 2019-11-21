@@ -1,0 +1,28 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+
+/coverage
+/build
+*node_modules
+*dist
+*npm-debug.log*
+logs/
+*.log
+
+.idea/
+.vscode/
+*yarn.lock
+
+# misc
+*.project
+*.settings
+*.DS_Store
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+*test-reports
+*.iml
+*/*/tmp/**
