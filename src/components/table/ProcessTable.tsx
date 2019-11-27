@@ -10,8 +10,8 @@ export interface ProcessTableProps {
 const renderProcessData = (process: Process) => {
 	return (
 		<div className="article-main">
-			<div className="title">{process.pid}</div>
-			<div className="date">{process.creationDate}</div>
+			<span className="title">{process.pid}</span>
+			<span className="date">{process.cpuPercentage}</span>
 		</div>
 	);
 };
