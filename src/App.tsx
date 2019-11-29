@@ -1,12 +1,12 @@
 import React from "react";
+import MainComponent from "./components/main/MainComponent";
 import "./App.css";
-import Main from "./components/main/Main";
 
 const App: React.FC = () => {
 	return (
 		<div className="App">
 			<header className="App-header">
-				<Main/>
+				<MainComponent/>
 			</header>
 		</div>
 	);

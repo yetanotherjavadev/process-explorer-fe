@@ -1,6 +1,6 @@
 export interface Process {
 	pid: string;
-	cpuPercentage: number;
+	cpuPercentage: string;
 	state: string;
 	creationDate: string;
 	executionPath: string;

@@ -1,0 +1,14 @@
+.MainComponent {
+	display: flex;
+	flex-direction: column;
+}
+
+.button-block {
+	padding: 20px;
+	display: flex;
+}
+
+.info-block {
+	padding: 20px;
+	display: flex;
+}
