@@ -3,12 +3,40 @@
 	flex-direction: column;
 }
 
+.title {
+	font-size: 2rem;
+}
+
 .button-block {
-	padding: 20px;
+	padding: 5px 20px 5px 20px;
 	display: flex;
 }
 
 .info-block {
-	padding: 20px;
+	padding: 5px 20px 5px 20px;
 	display: flex;
+	flex-direction: column;
+}
+
+.filter-block {
+	display: flex;
+	padding: 5px 20px 5px 20px;
+}
+
+.form-group {
+	margin-bottom: 0;
+	display: flex;
+}
+
+.form-group > .form-control {
+	color: white;
+}
+
+.inline-label {
+	display: flex;
+	margin-bottom: 0;
+	margin-right: 20px;
+	justify-content: center;
+	align-items: center;
+	font-size: 1rem;
 }

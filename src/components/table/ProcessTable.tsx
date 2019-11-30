@@ -3,43 +3,73 @@ import "./ProcessTable.css";
 import { Process } from "../../types/Process";
 import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
+import { SortingDescriptor } from "../../types/SortingDescriptor";
 
 export interface ProcessTableStateProps {
 	processes: Array<Process>;
+	sortedBy?: SortingDescriptor;
 }
 
 export interface ProcessTableActionProps {
 	actions: {
 		killProcess: (processId: string) => void;
+		sortByColumn: (descriptor: SortingDescriptor) => void;
 	};
 }
 
 export interface ProcessTableState {
-	columns: Array<string>; // current columns to display
+	columns: Array<keyof Process>;
 }
 
 export type ProcessTableProps = ProcessTableStateProps & ProcessTableActionProps;
 
-const DEFAULT_COLUMN_SET = ["pid", "process name", "cpu percentage", "creation date"];
+/**
+ * Configuration to match Process object fields to Column names
+ */
+const COLUMN_NAMES_MAP: Record<Partial<keyof Process>, string> = {
+	"pid": "PID",
+	"time": "Execution time",
+	"name": "Name",
+	"physicalMemory": "Physical Memory",
+	"virtualMemory": "Virtual Memory",
+	"executionPath": "Path",
+	"cpuPercentage": "CPU %",
+	"creationDate": "Creation Date",
+};
+
+const DEFAULT_COLUMN_SET: Array<keyof Process> = ["pid", "name", "cpuPercentage", "physicalMemory", "time"];
 
 export class ProcessTable extends Component<ProcessTableProps, ProcessTableState> {
 
 	constructor(props: ProcessTableProps) {
 		super(props);
 		this.state = {
-			columns: [],
+			columns: DEFAULT_COLUMN_SET,
 		};
 	}
 
-	// TODO: make columns configurable
-	renderHead = (columns: Array<string> = DEFAULT_COLUMN_SET) => {
+	renderHead = () => {
+		const { columns } = this.state;
+		const { sortedBy } = this.props;
+		const isAsc = sortedBy && sortedBy.asc;
 		return (
 			<thead>
 			<tr>
-				<th>PID</th>
-				<th>Process Name</th>
-				<th>CPU Percentage</th>
-				<th>Creation Date</th>
+				{columns && columns.map((key: keyof Process) => {
+					const activeKey = (sortedBy && key === sortedBy.key);
+					return (
+						<th key={key} className="relative-th">{COLUMN_NAMES_MAP[key]}
+							<span
+								className={"arrow-up" + (activeKey && !isAsc ? " active" : "")}
+								onClick={(e: any) => this.props.actions.sortByColumn({ key, asc: false })}
+							/>
+							<span
+								className={"arrow-down" + (activeKey && isAsc ? " active" : "")}
+								onClick={(e: any) => this.props.actions.sortByColumn({ key, asc: true })}
+							/>
+						</th>
+					);
+				})}
 				<th>Control</th>
 			</tr>
 			</thead>
@@ -52,11 +82,12 @@ export class ProcessTable extends Component<ProcessTableProps, ProcessTableState
 			{processes.map((process: Process) => {
 				return (
 					<tr key={process.pid}>
-						<td>{process.pid}</td>
-						<td>{process.name}</td>
-						<td>{process.cpuPercentage}</td>
-						<td>{process.creationDate}</td>
-						<td><Button variant="dark" onClick={(e: any) => this.props.actions.killProcess(process.pid)}>Kill process</Button></td>
+						{this.state.columns.map((key: keyof Process) => {
+							return (
+								<td key={key}>{process[key]}</td>
+							);
+						})}
+						<td><Button className="kill-btn btn-sm" variant="dark" onClick={(e: any) => this.props.actions.killProcess(process.pid)}>Kill process</Button></td>
 					</tr>
 				);
 			})
@@ -67,12 +98,10 @@ export class ProcessTable extends Component<ProcessTableProps, ProcessTableState
 
 	render() {
 		const { processes } = this.props;
-		const { columns } = this.state;
-
 		return (
 			<div className="process-table-container">
-				<Table striped bordered hover variant="dark">
-					{this.renderHead(columns)}
+				<Table className="table-full-height" striped bordered hover variant="dark">
+					{this.renderHead()}
 					{this.renderBody(processes)}
 				</Table>
 			</div>

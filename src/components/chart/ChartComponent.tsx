@@ -1,144 +1,96 @@
 import React, { Component } from "react";
 import "./ChartComponent.css";
-import Highcharts, { Options } from "highcharts";
+import { Options } from "highcharts";
+import Highcharts from "highcharts/highstock";
 import HighchartsReact from "highcharts-react-official";
 import { Process } from "../../types/Process";
+import { SeriesData } from "../../types/ChartDataTypes";
+import { ChartDataUtils } from "../../utils/ChartDataUtils";
+import { chartTheme } from "./theme/ChartTheme";
+import { Constants } from "../Constants";
 
 export interface ChartComponentProps {
 	processes: Array<Process>;
 }
 
 export interface ChartComponentState {
-	options: Options;
+	chartOptions: Options;
 }
 
-const options: Options = {
-	chart: {
-		type: "line",
-	},
-	title: {
-		text: "CPU Usage By Process Name"
-	},
-	xAxis: {
-		categories: ["1750", "1800", "1850"],
-	},
-	yAxis: {
-		labels: {
-			format: "{value}%"
-		}
-	},
-	time: {
-		useUTC: false
-	},
-	rangeSelector: {
-		buttons: [{
-			count: 1,
-			type: "minute",
-			text: "1M"
-		}, {
-			count: 5,
-			type: "minute",
-			text: "5M"
-		}, {
-			type: "all",
-			text: "All"
-		}],
-		inputEnabled: false,
-		selected: 0
-	},
-	series: [
-		{
-			name: "162",
-			data: [0.5, 0.5, 0.7]
-		},
-		{
-			name: "416",
-			data: [2.2, 5.5, 6.5]
-		},
-		{
-			name: "7365",
-			data: [5.6, 2.5, 4.4]
-		},
-		{
-			name: "7387",
-			data: [2.6, 2.7, 4.6]
-		},
-		{
-			name: "35146",
-			data: [6.0, 2.7, 4.6]
-		}] as any,
-};
+const CHART_TITLE = "CPU Usage By Process Name";
+const Y_AXIS_LABEL_FORMAT = "{value}%";
 
 export class ChartComponent extends Component<ChartComponentProps, ChartComponentState> {
 
 	constructor(props: ChartComponentProps) {
 		super(props);
+		Highcharts.setOptions(chartTheme);
 		this.state = {
-			options: {
-				...options,
+			chartOptions: {
+				chart: {
+					animation: false,
+					width: "900",
+					reflow: true,
+				},
+				title: {
+					text: CHART_TITLE,
+				},
+				yAxis: {
+					labels: {
+						format: Y_AXIS_LABEL_FORMAT,
+					}
+				},
+				// xAxis: { // TODO: use dates here
+				// 	type: "datetime",
+				// },
+				tooltip: {
+					formatter: function () {
+						return "CPU Usage for <b>" + this.series.name + "</b> is <b>" + this.y + "</b>";
+					}
+				},
 			}
 		};
 	}
 
-	prepareDataForChart = (): Record<string, number> => {
-		const { processes } = this.props;
-		const result: Record<string, number> = {};
-		processes.forEach((process: Process) => {
-			result[process.pid] = Number.parseFloat(process.cpuPercentage);
-		});
-		return result;
-	};
-
-	getUpdatedSeries = (prevSeries: any): Array<any> => {
-		const newData = this.prepareDataForChart();
+	/**
+	 * Updates current series with fresh values from props data.
+	 * If previous data was not there - creates initial values.
+	 *
+	 * @param prevSeries - series data that is currently displayed by chart
+	 * @param limit - a limiting number to trim the array of values
+	 */
+	getUpdatedSeries = (prevSeries?: Array<SeriesData>, limit: number = 10): Array<SeriesData> => {
+		const newDataFromProps = ChartDataUtils.prepareDataForChart(this.props.processes);
 
 		let iter = 0;
-		prevSeries.forEach((o: any) => {
-			if (o.data && o.data.length >= 10) {
-				const upd = o.data.slice(1);
-				upd.push(newData[o.name]);
-				prevSeries[iter].data = upd;
-			} else {
-				o.data.push(newData[o.name]);
-			}
-			window.console.log(o.name, prevSeries[iter].data);
-			iter++;
-		});
-		return prevSeries;
-	};
-
-	getInitialSeriesData = (): Array<any> => {
-		const result: Array<any> = [];
-		this.props.processes.forEach((p: Process) => {
-			result.push(
-				{
-					name: p.pid,
-					data: [p.cpuPercentage],
+		if (prevSeries && prevSeries.length !== 0) {
+			prevSeries.forEach((seriesData: SeriesData) => {
+				if (seriesData.data && seriesData.data.length >= limit) {
+					const upd = seriesData.data.slice(1);
+					upd.push(newDataFromProps[seriesData.name]);
+					prevSeries[iter].data = upd;
+				} else {
+					seriesData.data.push(newDataFromProps[seriesData.name]);
 				}
-			);
-		});
-		return result;
+				// window.console.log(seriesData.name, prevSeries[iter].data);
+				iter++;
+			});
+			return prevSeries;
+		} else {
+			return ChartDataUtils.getInitialSeriesData(this.props.processes);
+		}
 	};
 
 	componentDidMount() {
-		const { options } = this.state;
-		const component = this;
-
-		// const initialSeries = this.getInitialSeriesData();
-		// component.setState({
-		// 	options: {
-		// 		series: initialSeries,
-		// 	}
-		// });
+		const { chartOptions } = this.state;
 		setInterval(() => {
-			const updatedSeries = this.getUpdatedSeries(options.series as any);
-
-			component.setState({
-				options: {
+			const updatedSeries = this.getUpdatedSeries(chartOptions.series as any, 20);
+			this.setState({
+				chartOptions: {
 					series: updatedSeries,
 				}
 			} as any);
-		}, 1000);
+		}, Constants.DEFAULT_POLLING_INTERVAL);
 	}
 
 	render() {
@@ -146,7 +98,8 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 			<div className="chart-container">
 				<HighchartsReact
 					highcharts={Highcharts}
-					options={this.state.options}
+					// constructorType={"stockChart"}
+					options={this.state.chartOptions}
 				/>
 			</div>
 		);

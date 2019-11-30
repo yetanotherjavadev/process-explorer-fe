@@ -1,3 +1,59 @@
 .process-table-container {
+	max-height: 500px;
+	height: 500px;
+	overflow-y: scroll; /*This is kinda ugly due to white scroll in black theme */
+}
 
+.process-table-container tbody tr {
+	line-height: 40px;
+	min-height: 40px;
+	height: 40px;
+}
+
+.process-table-container tbody tr td {
+	height: 40px;
+	padding: 2px;
+}
+
+.kill-btn {
+	background-color: #737477;
+}
+
+.kill-btn:hover {
+	background-color: #8f9093;
+}
+
+.table-full-height {
+	height: 100%;
+}
+
+.relative-th {
+	position: relative;
+}
+
+.arrow-down, .arrow-up {
+	width: 0;
+	height: 0;
+	position: absolute;
+	right: 5px;
+	border-left: 8px solid transparent;
+	border-right: 8px solid transparent;
+}
+
+.arrow-up {
+	border-bottom: 8px solid darkgray;
+	top: 10px;
+}
+
+.arrow-down {
+	border-top: 8px solid darkgray;
+	bottom: 10px;
+}
+
+.arrow-up.active {
+	border-bottom: 8px solid white;
+}
+
+.arrow-down.active {
+	border-top: 8px solid white;
 }
