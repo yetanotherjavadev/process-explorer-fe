@@ -10,23 +10,27 @@ import Button from "react-bootstrap/Button";
 import "./MainComponent.css";
 import { SortingUtils } from "../../utils/SortingUtils";
 import { SortingDescriptor } from "../../types/SortingDescriptor";
+import { ProcessesBatch } from "../../types/ProcessesBatch";
 
 interface MainComponentProps {}
 
 interface MainComponentState {
-	processes: Array<Process>;
+	processesBatch: ProcessesBatch;
 	filter?: string; // filter is optional and case insensitive
 	sortedBy?: SortingDescriptor;
 }
 
 class MainComponent extends Component<MainComponentProps, MainComponentState> {
 	private client: any; // TODO: add typing
-	private pollingActive = false;
+	private pollingActive = true;
 
 	constructor(props: MainComponentProps) {
 		super(props);
 		this.state = {
-			processes: [],
+			processesBatch: {
+				currentTime: Date.now(),
+				processes: [],
+			},
 		};
 	}
 
@@ -41,7 +45,7 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 
 				this.client.subscribe("/topic/processes", (message: IMessage) => {
 					// window.console.log(message.body);
-					this.setState({processes: JSON.parse(message.body)});
+					this.setState({processesBatch: JSON.parse(message.body)});
 				});
 
 				this.client.subscribe("/topic/kill-successful", (message: IMessage) => {
@@ -95,11 +99,11 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 	};
 
 	getFilteredAndSortedProcesses = (): Array<Process> => {
-		const { filter, sortedBy, processes } = this.state;
+		const { filter, sortedBy, processesBatch: { processes } } = this.state;
 		let result = processes;
 		if (filter && filter.length > 0) {
 			result = processes.filter((p: Process) => {
-				return p.name.toLocaleLowerCase().indexOf(filter.toLowerCase()) !== -1;
+				return p.name.toLowerCase().indexOf(filter.toLowerCase()) !== -1;
 			});
 		}
 		if (sortedBy) {
@@ -138,7 +142,10 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 							}
 						}
 					/>
-					<ChartComponent processes={this.state.processes}/>
+					<ChartComponent
+						processesBatch={this.state.processesBatch}
+						pollingActive={this.pollingActive}
+					/>
 				</div>
 			</div>
 		);

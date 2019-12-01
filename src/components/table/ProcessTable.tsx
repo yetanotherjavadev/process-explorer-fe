@@ -4,6 +4,10 @@ import { Process } from "../../types/Process";
 import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
 import { SortingDescriptor } from "../../types/SortingDescriptor";
+import { chartTheme } from "../chart/theme/ChartTheme";
+import { ColumnDescriptor } from "../../types/ColumnDescriptor";
+import { Constants } from "../Constants";
+import { act } from "react-dom/test-utils";
 
 export interface ProcessTableStateProps {
 	processes: Array<Process>;
@@ -23,20 +27,6 @@ export interface ProcessTableState {
 
 export type ProcessTableProps = ProcessTableStateProps & ProcessTableActionProps;
 
-/**
- * Configuration to match Process object fields to Column names
- */
-const COLUMN_NAMES_MAP: Record<Partial<keyof Process>, string> = {
-	"pid": "PID",
-	"time": "Execution time",
-	"name": "Name",
-	"physicalMemory": "Physical Memory",
-	"virtualMemory": "Virtual Memory",
-	"executionPath": "Path",
-	"cpuPercentage": "CPU %",
-	"creationDate": "Creation Date",
-};
-
 const DEFAULT_COLUMN_SET: Array<keyof Process> = ["pid", "name", "cpuPercentage", "physicalMemory", "time"];
 
 export class ProcessTable extends Component<ProcessTableProps, ProcessTableState> {
@@ -48,25 +38,35 @@ export class ProcessTable extends Component<ProcessTableProps, ProcessTableState
 		};
 	}
 
+	renderSortingArrows = (key: keyof Process, activeKey: boolean, isAsc: boolean) => {
+		return (
+			<>
+				<span
+					className={"arrow-up" + (activeKey && !isAsc ? " active" : "")}
+					onClick={(e: any) => this.props.actions.sortByColumn({ key, asc: false })}
+				/>
+				<span
+					className={"arrow-down" + (activeKey && isAsc ? " active" : "")}
+					onClick={(e: any) => this.props.actions.sortByColumn({ key, asc: true })}
+				/>
+			</>
+		);
+	};
+
 	renderHead = () => {
 		const { columns } = this.state;
 		const { sortedBy } = this.props;
-		const isAsc = sortedBy && sortedBy.asc;
+		const isAsc = !!(sortedBy && sortedBy.asc);
 		return (
 			<thead>
 			<tr>
+				<th className="color-badge"/>
 				{columns && columns.map((key: keyof Process) => {
-					const activeKey = (sortedBy && key === sortedBy.key);
+					const activeKey = !!(sortedBy && key === sortedBy.key);
+					const { columnName, sortable } = Constants.COLUMN_DESCRIPTORS[key];
 					return (
-						<th key={key} className="relative-th">{COLUMN_NAMES_MAP[key]}
-							<span
-								className={"arrow-up" + (activeKey && !isAsc ? " active" : "")}
-								onClick={(e: any) => this.props.actions.sortByColumn({ key, asc: false })}
-							/>
-							<span
-								className={"arrow-down" + (activeKey && isAsc ? " active" : "")}
-								onClick={(e: any) => this.props.actions.sortByColumn({ key, asc: true })}
-							/>
+						<th key={key} className="relative-th">{columnName}
+							{sortable && this.renderSortingArrows(key, activeKey, isAsc)}
 						</th>
 					);
 				})}
@@ -76,12 +76,24 @@ export class ProcessTable extends Component<ProcessTableProps, ProcessTableState
 		);
 	};
 
+	/**
+	 * Finds a color of series in chart that matches given process ID
+	 */
+	getColorForProcess = (pid: string): string => {
+		// chartTheme.colors; TODO: find matching
+		return "#ff00ff";
+	};
+
 	renderBody = (processes: Array<Process>) => {
 		return (
 			<tbody>
 			{processes.map((process: Process) => {
+				const colorFor = this.getColorForProcess(process.pid);
 				return (
 					<tr key={process.pid}>
+						<td className="color-badge">
+							<div className="color-marker" style={{backgroundColor: colorFor}}/>
+						</td>
 						{this.state.columns.map((key: keyof Process) => {
 							return (
 								<td key={key}>{process[key]}</td>

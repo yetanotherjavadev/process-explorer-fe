@@ -1,34 +1,35 @@
 import { Process } from "../types/Process";
 import { SeriesData } from "../types/ChartDataTypes";
+import { ProcessesBatch } from "../types/ProcessesBatch";
 
 export class ChartDataUtils {
-
 	/**
 	 * Parses raw data from processes to object
-	 *
 	 * @return an object of form: { pid: cpuUsage, pid2: cpuUsage2, ... }
 	 */
-	static prepareDataForChart = (processes: Array<Process>): Record<string, number> => {
-		const result: Record<string, number> = {};
-		processes.forEach((process: Process) => {
+	static prepareDataForChart = (processesBatch: ProcessesBatch, offline?: boolean): Record<string, Array<number>> => {
+		const result: Record<string, Array<number>> = {};
+		const xValue = processesBatch.currentTime;
+		processesBatch.processes.forEach((process: Process) => {
 			const compoundKey = `${process.name}(${process.pid})`;
-			result[compoundKey] = Number.parseFloat(process.cpuPercentage);
+			const yValue = offline ? 0.0 : Number.parseFloat(process.cpuPercentage);
+			result[compoundKey] = [xValue, yValue];
 		});
 		return result;
 	};
 
 	/**
 	 * Transforms processes data into series to provide to charts
-	 * @param processes - Array<Process> raw data from server
+	 * @param processesBatch - Array<Process> and timestamp as raw data from server
 	 */
-	static getInitialSeriesData = (processes: Array<Process>): Array<SeriesData> => {
+	static getInitialSeriesData = (processesBatch: ProcessesBatch): Array<SeriesData> => {
 		const result: Array<SeriesData> = [];
-		processes.forEach((process: Process) => {
+		const xValue = processesBatch.currentTime;
+		processesBatch.processes.forEach((process: Process) => {
 			result.push(
 				{
 					name: `${process.name}(${process.pid})`,
-					// id: p.pid,
-					data: [Number.parseFloat(process.cpuPercentage)],
+					data: [[xValue, Number.parseFloat(process.cpuPercentage)]],
 				}
 			);
 		});

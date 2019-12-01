@@ -1,4 +1,4 @@
 export interface SeriesData {
 	name: string;
-	data: Array<number>;
+	data: Array<Array<number>>; // actually contains pairs of values [x, y]
 }

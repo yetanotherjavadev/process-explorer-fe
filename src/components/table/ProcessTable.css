@@ -1,7 +1,8 @@
 .process-table-container {
 	max-height: 500px;
 	height: 500px;
-	overflow-y: scroll; /*This is kinda ugly due to white scroll in black theme */
+	padding-bottom: 10px;
+	/*overflow-y: scroll; !*This is kinda ugly due to white scroll in black theme *!*/
 }
 
 .process-table-container tbody tr {
@@ -12,6 +13,7 @@
 
 .process-table-container tbody tr td {
 	height: 40px;
+	min-height: 40px;
 	padding: 2px;
 }
 
@@ -56,4 +58,19 @@
 
 .arrow-down.active {
 	border-top: 8px solid white;
+}
+
+.color-badge {
+	width: 5px;
+	padding: 0;
+	position: relative;
+}
+
+.color-marker {
+	padding: 2px;
+	position: absolute;
+	right: 7px;
+	bottom: 5px;
+	left: 7px;
+	top: 5px;
 }

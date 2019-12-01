@@ -3,14 +3,15 @@ import "./ChartComponent.css";
 import { Options } from "highcharts";
 import Highcharts from "highcharts/highstock";
 import HighchartsReact from "highcharts-react-official";
-import { Process } from "../../types/Process";
 import { SeriesData } from "../../types/ChartDataTypes";
 import { ChartDataUtils } from "../../utils/ChartDataUtils";
 import { chartTheme } from "./theme/ChartTheme";
 import { Constants } from "../Constants";
+import { ProcessesBatch } from "../../types/ProcessesBatch";
 
 export interface ChartComponentProps {
-	processes: Array<Process>;
+	processesBatch: ProcessesBatch;
+	pollingActive: boolean;
 }
 
 export interface ChartComponentState {
@@ -40,15 +41,29 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 						format: Y_AXIS_LABEL_FORMAT,
 					}
 				},
-				// xAxis: { // TODO: use dates here
-				// 	type: "datetime",
-				// },
+				xAxis: {
+					type: "datetime",
+					labels: {
+						format: "{value: %l:%M:%S}",
+					},
+				} as any,
 				tooltip: {
 					formatter: function () {
 						return "CPU Usage for <b>" + this.series.name + "</b> is <b>" + this.y + "</b>";
 					}
 				},
-			}
+				plotOptions: {
+					series: {
+						events: {
+							mouseOver: function (e: PointerEvent) {
+								// window.console.log("i'm over!", (e.target as any).userOptions.name);
+								window.console.log("i'm over!", (e.target as any));
+								// window.console.log(chart.legend);
+							},
+						}
+					}
+				},
+			},
 		};
 	}
 
@@ -57,18 +72,18 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 	 * If previous data was not there - creates initial values.
 	 *
 	 * @param prevSeries - series data that is currently displayed by chart
-	 * @param limit - a limiting number to trim the array of values
+	 * @param limit - a limiting number to trim the array of values (= max # of points of a series shown on the chart at the same time)
 	 */
 	getUpdatedSeries = (prevSeries?: Array<SeriesData>, limit: number = 10): Array<SeriesData> => {
-		const newDataFromProps = ChartDataUtils.prepareDataForChart(this.props.processes);
+		const newDataFromProps: Record<string, Array<number>> = ChartDataUtils.prepareDataForChart(this.props.processesBatch, !this.props.pollingActive);
 
 		let iter = 0;
 		if (prevSeries && prevSeries.length !== 0) {
 			prevSeries.forEach((seriesData: SeriesData) => {
 				if (seriesData.data && seriesData.data.length >= limit) {
-					const upd = seriesData.data.slice(1);
-					upd.push(newDataFromProps[seriesData.name]);
-					prevSeries[iter].data = upd;
+					const updatedData = seriesData.data.slice(1);
+					updatedData.push(newDataFromProps[seriesData.name]);
+					prevSeries[iter].data = updatedData;
 				} else {
 					seriesData.data.push(newDataFromProps[seriesData.name]);
 				}
@@ -77,7 +92,7 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 			});
 			return prevSeries;
 		} else {
-			return ChartDataUtils.getInitialSeriesData(this.props.processes);
+			return ChartDataUtils.getInitialSeriesData(this.props.processesBatch);
 		}
 	};
 
@@ -98,7 +113,6 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 			<div className="chart-container">
 				<HighchartsReact
 					highcharts={Highcharts}
-					// constructorType={"stockChart"}
 					options={this.state.chartOptions}
 				/>
 			</div>
