@@ -10,9 +10,16 @@ import { Constants } from "../Constants";
 import { SystemInfo } from "../../types/SystemInfo";
 import Button from "react-bootstrap/Button";
 
-export interface ChartComponentProps {
+export interface ChartComponentStateProps {
 	systemInfo: SystemInfo;
 	pollingActive: boolean;
+}
+
+export interface ChartComponentActionProps {
+	actions: {
+		startPolling: () => void;
+		stopPolling: () => void;
+	};
 }
 
 export interface ChartComponentState {
@@ -20,10 +27,12 @@ export interface ChartComponentState {
 	isDetailedData: boolean;
 }
 
+export type ChartComponentProps = ChartComponentActionProps & ChartComponentStateProps;
+
 export class ChartComponent extends Component<ChartComponentProps, ChartComponentState> {
 
 	// private fields used to store both types of series data (simple and detailed) for easy switching
-	private cpuData: SeriesData = {
+	private simpleData: SeriesData = {
 		name: Constants.SIMPLE_VIEW_SERIES_NAME,
 		data: [],
 	};
@@ -39,6 +48,7 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 					animation: false,
 					width: "900",
 					reflow: true,
+					height: "700",
 				},
 				title: {
 					text: Constants.SIMPLE_VIEW_CHART_TITLE,
@@ -64,20 +74,14 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 	}
 
 	/**
-	 * Updates current series with fresh values from props data.
+	 * Updates current detailed series with fresh values from props data.
 	 * If previous data was not there - creates initial values.
 	 *
 	 * @param limit - a limiting number to trim the array of values (= max # of X points of a series shown on the chart at the same time)
 	 */
-	getUpdatedSeries = (limit: number = 10): Array<SeriesData> => {
-		const prevSeries = this.detailedData;
+	getDetailedSeriesUpdated = (limit: number): Array<SeriesData> => {
 		const newDataFromProps: Record<string, Array<number>> = ChartDataUtils.prepareDataForChart(this.props.systemInfo, !this.props.pollingActive);
-		const newCpuDataFromProps: Array<number> = ChartDataUtils.prepareCPUDataForChart(this.props.systemInfo, !this.props.pollingActive);
-
-		let perCpuResult: Array<SeriesData>;
-		let cpuResult: Array<SeriesData>;
-
-		// calculate per-process CPU data
+		const prevSeries = this.detailedData;
 		if (prevSeries.length !== 0) {
 			const newSeries = prevSeries.map((seriesData: SeriesData) => {
 				const newData = [...seriesData.data];
@@ -89,46 +93,56 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 			});
 			const invalidSeries = ChartDataUtils.getInvalidKey(prevSeries, newDataFromProps);
 			if (invalidSeries) {
-				perCpuResult = ChartDataUtils.getInitialSeriesData(this.props.systemInfo);
+				return ChartDataUtils.getInitialSeriesData(this.props.systemInfo);
 			}
-			perCpuResult = newSeries;
+			return newSeries;
 		} else {
-			perCpuResult = ChartDataUtils.getInitialSeriesData(this.props.systemInfo);
+			return ChartDataUtils.getInitialSeriesData(this.props.systemInfo);
 		}
+	};
 
-		// calculate CPU data
-		const { data, name } = this.cpuData;
+	/**
+	 * Updates current simple view series with fresh values from props data.
+	 * If previous data was not there - creates initial values.
+	 *
+	 * @param limit - a limiting number to trim the array of values (= max # of X points of a series shown on the chart at the same time)
+	 */
+	getSimpleSeriesUpdated = (limit: number): SeriesData => {
+		const newCpuDataFromProps: Array<number> = ChartDataUtils.prepareCPUDataForChart(this.props.systemInfo, !this.props.pollingActive);
+		const { data, name } = this.simpleData;
 		const newData = [...data];
 		if (newData.length >= limit) {
 			newData.shift();
 		}
 		newData.push(newCpuDataFromProps);
-		cpuResult = [{ name, data: newData }];
+		return { name, data: newData };
+	};
 
-		this.detailedData = perCpuResult;
-		this.cpuData = cpuResult[0];
-
-		return this.state.isDetailedData ? perCpuResult : cpuResult;
+	updateValues = () => {
+		this.simpleData = this.getSimpleSeriesUpdated(20);
+		this.detailedData = this.getDetailedSeriesUpdated(20);
 	};
 
 	componentDidMount() {
 		setInterval(() => {
-			const updatedSeries = this.getUpdatedSeries(20);
+			this.updateValues();
+			const dataToShow = this.state.isDetailedData ? this.detailedData : this.simpleData;
 			this.setState({
 				chartOptions: {
-					series: updatedSeries,
+					series: dataToShow,
 				},
 			} as any);
 		}, Constants.DEFAULT_POLLING_INTERVAL);
 	}
 
 	toggleDetailedData = (detailed: boolean) => {
-		const updatedSeries = this.getUpdatedSeries(20);
+		this.updateValues();
+		const dataToShow = this.state.isDetailedData ? this.detailedData : this.simpleData;
 		const chartTitle = detailed ? Constants.DETAILED_VIEW_CHART_TITLE : Constants.SIMPLE_VIEW_CHART_TITLE;
 		this.setState({
 			isDetailedData: detailed,
 			chartOptions: {
-				series: updatedSeries,
+				series: dataToShow,
 				title: {
 					text: chartTitle,
 				},
@@ -136,18 +150,32 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 		} as any);
 	};
 
+	startPolling = () => {
+		this.props.actions.startPolling();
+	};
+
+	stopPolling = () => {
+		this.props.actions.stopPolling();
+	};
+
 	render() {
 		return (
 			<div className="ChartComponent">
+				<div className="button-block">
+					<div className="button-block-left">
+						<Button variant="dark" onClick={this.startPolling}>Start polling</Button>
+						<Button variant="dark" onClick={this.stopPolling}>Stop polling</Button>
+					</div>
+					<div className="button-block-right">
+						<Button variant="dark" active={!this.state.isDetailedData} onClick={() => this.toggleDetailedData(false)}>Simple view</Button>
+						<Button variant="dark" active={this.state.isDetailedData} onClick={() => this.toggleDetailedData(true)}>Detailed view</Button>
+					</div>
+				</div>
 				<div className="chart-container">
 					<HighchartsReact
 						highcharts={Highcharts}
 						options={this.state.chartOptions}
 					/>
-				</div>
-				<div className="button-block">
-					<Button variant="dark" active={!this.state.isDetailedData} onClick={() => this.toggleDetailedData(false)}>Simple view</Button>
-					<Button variant="dark" active={this.state.isDetailedData} onClick={() => this.toggleDetailedData(true)}>Detailed view</Button>
 				</div>
 			</div>
 		);

@@ -33,6 +33,7 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 				uiProcesses: [],
 				overallCpuUsage: 0.0,
 			},
+			filter: "",
 			sortedBy: {
 				key: "pid",
 				asc: true,
@@ -123,36 +124,41 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 		return (
 			<div className="MainComponent">
 				<div className="title">Process explorer</div>
-				<div className="button-block">
-					<Button variant="dark" onClick={this.startPolling}>Start polling</Button>
-					<Button variant="dark" onClick={this.stopPolling}>Stop polling</Button>
-				</div>
-				<div className="filter-block">
-					<div className="form-group">
-						<label className="inline-label" htmlFor="filter">Filter:</label>
-						<input
-							type="text"
-							className="form-control bg-dark"
-							id="filter"
-							value={this.state.filter}
-							onChange={this.handleFilterChange}
+				<div className="info-block"/>
+				<div className="data-block">
+					<div className="table-block">
+						<div className="filter-block">
+							<div className="form-group">
+								<label className="inline-label" htmlFor="filter">Filter:</label>
+								<input
+									type="text"
+									className="form-control bg-dark"
+									id="filter"
+									value={this.state.filter}
+									onChange={this.handleFilterChange}
+								/>
+							</div>
+						</div>
+						<ProcessTable
+							processes={this.getFilteredAndSortedProcesses()}
+							sortedBy={this.state.sortedBy}
+							actions={{
+								killProcess: (pid: string) => this.killProcess(pid),
+								sortByColumn: (sortingDescriptor: SortingDescriptor) => this.sortByKey(sortingDescriptor),
+							}
+							}
 						/>
 					</div>
-				</div>
-				<div className="info-block">
-					<ProcessTable
-						processes={this.getFilteredAndSortedProcesses()}
-						sortedBy={this.state.sortedBy}
-						actions={{
-							killProcess: (pid: string) => this.killProcess(pid),
-							sortByColumn: (sortingDescriptor: SortingDescriptor) => this.sortByKey(sortingDescriptor),
-							}
-						}
-					/>
-					<ChartComponent
-						systemInfo={this.state.systemInfo}
-						pollingActive={this.pollingActive}
-					/>
+					<div className="chart-block">
+						<ChartComponent
+							systemInfo={this.state.systemInfo}
+							pollingActive={this.pollingActive}
+							actions={{
+								startPolling: () => this.startPolling(),
+								stopPolling: () => this.stopPolling(),
+							}}
+						/>
+					</div>
 				</div>
 				<footer className="main-footer"/>
 			</div>

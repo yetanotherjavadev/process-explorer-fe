@@ -1,8 +1,8 @@
 .process-table-container {
-	max-height: 500px;
-	/*height: 500px;*/
+	max-height: 700px;
 	padding-bottom: 10px;
 	overflow: auto;
+	width: 900px;
 }
 
 .process-table-container tbody tr {
