@@ -5,12 +5,12 @@ import { Constants } from "../Constants";
 import { Process } from "../../types/Process";
 import { ProcessTable } from "../table/ProcessTable";
 import { ChartComponent } from "../chart/ChartComponent";
-import Button from "react-bootstrap/Button";
 
 import "./MainComponent.css";
 import { SortingUtils } from "../../utils/SortingUtils";
 import { SortingDescriptor } from "../../types/SortingDescriptor";
 import { SystemInfo } from "../../types/SystemInfo";
+import { KilledProcessInfo } from "../../types/KilledProcessInfo";
 
 interface MainComponentProps {}
 
@@ -18,15 +18,18 @@ interface MainComponentState {
 	systemInfo: SystemInfo;
 	filter?: string; // filter is optional and case insensitive
 	sortedBy?: SortingDescriptor;
+	pollingActive: boolean;
+	processKilled?: KilledProcessInfo;
 }
 
 class MainComponent extends Component<MainComponentProps, MainComponentState> {
-	private client: any; // TODO: add typing
-	private pollingActive = true;
+	private client: Client;
 
 	constructor(props: MainComponentProps) {
 		super(props);
+		this.client = new Client();
 		this.state = {
+			pollingActive: true,
 			systemInfo: {
 				currentTime: Date.now(),
 				trackedProcesses: [],
@@ -41,9 +44,8 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 		};
 	}
 
+	// keeping server side communication logic here for simplicity. Ultimately this should go to a separate layer
 	componentDidMount() {
-		this.client = new Client();
-
 		this.client.configure({
 			brokerURL: Constants.DEFAULT_SERVER_ADDRESS,
 			reconnectDelay: Constants.RECONNECT_DELAY,
@@ -54,36 +56,64 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 					this.setState({systemInfo: JSON.parse(message.body)});
 				});
 
-				this.client.subscribe("/topic/kill-successful", (message: IMessage) => {
-					window.console.log("killed process: " + message.body);
+				this.client!.subscribe("/topic/kill-successful", (message: IMessage) => {
+					const killedProcessInfo = JSON.parse(message.body);
+					window.console.log("Kill process succeeded: " + killedProcessInfo.killedId + "; New UI tracked process: " + killedProcessInfo.newProcessId);
+					this.showKilledInfo(killedProcessInfo);
 				});
 
 				this.client.subscribe("/topic/kill-failed", (message: IMessage) => {
-					window.console.log("kill of process failed: " + message.body);
+					const killedProcessInfo = JSON.parse(message.body);
+					window.console.log("kill of process failed: " + killedProcessInfo.newProcessId);
+					this.showKilledInfo(killedProcessInfo);
 				});
 
 				this.client.subscribe("/topic/scheduled-task-process", (message: IMessage) => {
 					window.console.log(message.body); // every second data comes from server
 				});
 
-				this.startPolling(); // automatically start polling when connected
+				this.startPolling(); // automatically starts polling when connected
 			},
 			onDisconnect: () => {
+				this.setState({
+					pollingActive: false,
+				});
 				window.console.log("onDisconnect");
-			}
+			},
+			onWebSocketError: () => {
+				window.console.log("WebSocket error");
+				this.setState({
+					pollingActive: false,
+				});
+			},
 		});
-
 		this.client.activate();
 	}
 
+	showKilledInfo = (kpi: KilledProcessInfo) => {
+		this.setState({
+			processKilled: kpi,
+		}, () => {
+			setTimeout(() => {
+				this.setState({
+					processKilled: undefined,
+				});
+			}, Constants.MESSAGE_POPUP_TIMEOUT);
+		});
+	};
+
 	startPolling = () => {
 		this.client.publish({ destination: "/app/start-process-polling", body: "Start polling please!" });
-		this.pollingActive = true;
+		this.setState({
+			pollingActive: true,
+		});
 	};
 
 	stopPolling = () => {
 		this.client.publish({ destination: "/app/stop-process-polling", body: "Stop polling please!" });
-		this.pollingActive = false;
+		this.setState({
+			pollingActive: false,
+		});
 	};
 
 	killProcess = (pid: string) => {
@@ -121,27 +151,42 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 	};
 
 	render() {
+		const { filter, processKilled, sortedBy, pollingActive } = this.state;
 		return (
 			<div className="MainComponent">
 				<div className="title">Process explorer</div>
-				<div className="info-block"/>
+
 				<div className="data-block">
 					<div className="table-block">
 						<div className="filter-block">
 							<div className="form-group">
-								<label className="inline-label" htmlFor="filter">Filter:</label>
+								<label className="inline-label" htmlFor="filter">Search by name:</label>
 								<input
 									type="text"
 									className="form-control bg-dark"
 									id="filter"
-									value={this.state.filter}
+									value={filter}
 									onChange={this.handleFilterChange}
 								/>
+							</div>
+							<div className="info-block">
+								{!pollingActive &&
+								<div className="offline-message" role="alert">
+									You're in offline mode
+								</div>}
+								{processKilled && processKilled.killedId &&
+								<div className="info-message">
+									{`Process ${processKilled.killedId} has been killed`}
+								</div>}
+								{processKilled && !processKilled.killedId && processKilled.newProcessId &&
+								<div className="info-message">
+									{`Process ${processKilled.newProcessId} cannot be killed`}
+								</div>}
 							</div>
 						</div>
 						<ProcessTable
 							processes={this.getFilteredAndSortedProcesses()}
-							sortedBy={this.state.sortedBy}
+							sortedBy={sortedBy}
 							actions={{
 								killProcess: (pid: string) => this.killProcess(pid),
 								sortByColumn: (sortingDescriptor: SortingDescriptor) => this.sortByKey(sortingDescriptor),
@@ -152,7 +197,7 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 					<div className="chart-block">
 						<ChartComponent
 							systemInfo={this.state.systemInfo}
-							pollingActive={this.pollingActive}
+							pollingActive={this.state.pollingActive}
 							actions={{
 								startPolling: () => this.startPolling(),
 								stopPolling: () => this.stopPolling(),

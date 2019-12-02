@@ -5,6 +5,7 @@ import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
 import { SortingDescriptor } from "../../types/SortingDescriptor";
 import { Constants } from "../Constants";
+import { ColumnDescriptor } from "../../types/ColumnDescriptor";
 
 export interface ProcessTableStateProps {
 	processes: Array<Process>;
@@ -19,19 +20,17 @@ export interface ProcessTableActionProps {
 }
 
 export interface ProcessTableState {
-	columns: Array<keyof Process>;
+	columns: Array<ColumnDescriptor>;
 }
 
 export type ProcessTableProps = ProcessTableStateProps & ProcessTableActionProps;
-
-const DEFAULT_COLUMN_SET: Array<keyof Process> = ["pid", "name", "cpuPercentage", "physicalMemory", "time"];
 
 export class ProcessTable extends Component<ProcessTableProps, ProcessTableState> {
 
 	constructor(props: ProcessTableProps) {
 		super(props);
 		this.state = {
-			columns: DEFAULT_COLUMN_SET,
+			columns: Constants.DEFAULT_COLUMN_SET,
 		};
 	}
 
@@ -57,9 +56,9 @@ export class ProcessTable extends Component<ProcessTableProps, ProcessTableState
 		return (
 			<thead>
 			<tr>
-				{columns && columns.map((key: keyof Process) => {
+				{columns && columns.map((columnDescriptor: ColumnDescriptor) => {
+					const { columnName, sortable, key } = columnDescriptor;
 					const activeKey = !!(sortedBy && key === sortedBy.key);
-					const { columnName, sortable } = Constants.COLUMN_DESCRIPTORS[key];
 					return (
 						<th key={key} className="relative-th">{columnName}
 							{sortable && this.renderSortingArrows(key, activeKey, isAsc)}
@@ -78,7 +77,8 @@ export class ProcessTable extends Component<ProcessTableProps, ProcessTableState
 			{processes.map((process: Process) => {
 				return (
 					<tr key={process.pid}>
-						{this.state.columns.map((key: keyof Process) => {
+						{this.state.columns.map((columnDescriptor: ColumnDescriptor) => {
+							const { key } = columnDescriptor;
 							return (
 								<td key={key}>{process[key]}</td>
 							);

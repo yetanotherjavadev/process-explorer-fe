@@ -22,12 +22,16 @@ export class ChartDataUtils {
 	};
 
 	/**
-	 * Parses raw data from processes to object with pids as keys and array of cpu usage values as values
+	 * Parses raw data from processes to object with (name+pid) as keys and array of cpu usage values as values
+	 *
+	 * @param lastTick - used to calculate "next step on X axis" in case if we're in offline mode
+	 * @param systemInfo - raw data from server
+	 * @param offline - if true then we're offline
 	 * @return an object of form: { pid: cpuUsage, pid2: cpuUsage2, ... }
 	 */
-	static prepareDataForChart = (systemInfo: SystemInfo, offline?: boolean): Record<string, Array<number>> => {
+	static prepareDataForChart = (lastTick: number, systemInfo: SystemInfo, offline?: boolean): Record<string, Array<number>> => {
 		const result: Record<string, Array<number>> = {};
-		const xValue = systemInfo.currentTime;
+		const xValue = offline ? lastTick + 1000 : systemInfo.currentTime;
 		systemInfo.uiProcesses.forEach((process: Process) => {
 			const compoundKey = `${process.name}(${process.pid})`;
 			const yValue = offline ? 0.0 : Number.parseFloat(process.cpuPercentage);
@@ -37,12 +41,18 @@ export class ChartDataUtils {
 	};
 
 	/**
-	 * Parses raw data for CPU Usage to an array for Chart series
+	 * Parses raw data for Overall CPU Usage to an array for Chart series
+	 *
+	 * @param lastTick - used to calculate "next step on X axis" in case if we're in offline mode
+	 * @param systemInfo - raw data from server
+	 * @param offline - if true then we're offline
+	 *
 	 * @return a pair of values - [time, percent_cpu_usage_value]
 	 */
-	static prepareCPUDataForChart = (systemInfo: SystemInfo, offline?: boolean): Array<number> => {
+	static prepareCPUDataForChart = (lastTick: number, systemInfo: SystemInfo, offline?: boolean): Array<number> => {
+		const newTimeValue = offline ? lastTick + 1000 : systemInfo.currentTime;
 		const cpuUsageValue = offline ? 0.0 : systemInfo.overallCpuUsage;
-		return [systemInfo.currentTime, cpuUsageValue];
+		return [newTimeValue, cpuUsageValue];
 	};
 
 	/**
