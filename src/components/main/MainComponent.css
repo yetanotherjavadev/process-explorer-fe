@@ -24,6 +24,8 @@
 .filter-block {
 	display: flex;
 	padding: 5px 20px 25px 20px;
+	flex: 1 1 auto;
+	justify-content: space-between;
 }
 
 .form-group {
@@ -39,8 +41,9 @@
 	display: flex;
 	margin-bottom: 0;
 	margin-right: 20px;
-	justify-content: center;
+	justify-content: flex-start;
 	align-items: center;
+	min-width: 130px;
 	font-size: 1rem;
 }
 
@@ -51,4 +54,16 @@
 
 .data-block, .info-block {
 	display: flex;
+}
+
+.offline-message, .info-message {
+	background-color: crimson;
+	padding: 5px 10px 5px 10px;
+	display: flex;
+	align-self: flex-end;
+	border-radius: 5px;
+}
+
+.info-message {
+	background-color: #876540;
 }

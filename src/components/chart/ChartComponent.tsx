@@ -44,6 +44,9 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 		this.state = {
 			isDetailedData: false,
 			chartOptions: {
+				time: {
+					timezoneOffset: -120, // hardcoded for UTC+2 now, TODO: this should be calculated per client time zone
+				},
 				chart: {
 					animation: false,
 					width: "900",
@@ -80,8 +83,9 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 	 * @param limit - a limiting number to trim the array of values (= max # of X points of a series shown on the chart at the same time)
 	 */
 	getDetailedSeriesUpdated = (limit: number): Array<SeriesData> => {
-		const newDataFromProps: Record<string, Array<number>> = ChartDataUtils.prepareDataForChart(this.props.systemInfo, !this.props.pollingActive);
 		const prevSeries = this.detailedData;
+		const lastTick = prevSeries[0] && prevSeries[0].data ? prevSeries[0].data[prevSeries[0].data.length - 1][0] : 0; // last X axis value stored in local variable
+		const newDataFromProps: Record<string, Array<number>> = ChartDataUtils.prepareDataForChart(lastTick, this.props.systemInfo, !this.props.pollingActive);
 		if (prevSeries.length !== 0) {
 			const newSeries = prevSeries.map((seriesData: SeriesData) => {
 				const newData = [...seriesData.data];
@@ -91,6 +95,7 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 				newData.push(newDataFromProps[seriesData.name]);
 				return { name: seriesData.name, data: newData };
 			});
+			// in case if we killed a process that was shown in the chart
 			const invalidSeries = ChartDataUtils.getInvalidKey(prevSeries, newDataFromProps);
 			if (invalidSeries) {
 				return ChartDataUtils.getInitialSeriesData(this.props.systemInfo);
@@ -108,8 +113,10 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 	 * @param limit - a limiting number to trim the array of values (= max # of X points of a series shown on the chart at the same time)
 	 */
 	getSimpleSeriesUpdated = (limit: number): SeriesData => {
-		const newCpuDataFromProps: Array<number> = ChartDataUtils.prepareCPUDataForChart(this.props.systemInfo, !this.props.pollingActive);
 		const { data, name } = this.simpleData;
+		const lastTick = data && data.length ? data[data.length - 1][0] : 0; // last X axis value is stored in local variable
+		const newCpuDataFromProps: Array<number> = ChartDataUtils.prepareCPUDataForChart(lastTick, this.props.systemInfo, !this.props.pollingActive);
+
 		const newData = [...data];
 		if (newData.length >= limit) {
 			newData.shift();
@@ -150,21 +157,22 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 		} as any);
 	};
 
-	startPolling = () => {
-		this.props.actions.startPolling();
-	};
-
-	stopPolling = () => {
-		this.props.actions.stopPolling();
+	togglePolling = () => {
+		if (this.props.pollingActive) {
+			this.props.actions.stopPolling();
+		} else {
+			this.props.actions.startPolling();
+		}
 	};
 
 	render() {
+		const { pollingActive } = this.props;
+		const btnText = pollingActive ? "Stop polling" : "Start polling";
 		return (
 			<div className="ChartComponent">
 				<div className="button-block">
 					<div className="button-block-left">
-						<Button variant="dark" onClick={this.startPolling}>Start polling</Button>
-						<Button variant="dark" onClick={this.stopPolling}>Stop polling</Button>
+						<Button variant="dark" onClick={this.togglePolling}>{btnText}</Button>
 					</div>
 					<div className="button-block-right">
 						<Button variant="dark" active={!this.state.isDetailedData} onClick={() => this.toggleDetailedData(false)}>Simple view</Button>
