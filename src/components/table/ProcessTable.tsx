@@ -4,10 +4,7 @@ import { Process } from "../../types/Process";
 import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
 import { SortingDescriptor } from "../../types/SortingDescriptor";
-import { chartTheme } from "../chart/theme/ChartTheme";
-import { ColumnDescriptor } from "../../types/ColumnDescriptor";
 import { Constants } from "../Constants";
-import { act } from "react-dom/test-utils";
 
 export interface ProcessTableStateProps {
 	processes: Array<Process>;
@@ -60,7 +57,6 @@ export class ProcessTable extends Component<ProcessTableProps, ProcessTableState
 		return (
 			<thead>
 			<tr>
-				<th className="color-badge"/>
 				{columns && columns.map((key: keyof Process) => {
 					const activeKey = !!(sortedBy && key === sortedBy.key);
 					const { columnName, sortable } = Constants.COLUMN_DESCRIPTORS[key];
@@ -76,24 +72,12 @@ export class ProcessTable extends Component<ProcessTableProps, ProcessTableState
 		);
 	};
 
-	/**
-	 * Finds a color of series in chart that matches given process ID
-	 */
-	getColorForProcess = (pid: string): string => {
-		// chartTheme.colors; TODO: find matching
-		return "#ff00ff";
-	};
-
 	renderBody = (processes: Array<Process>) => {
 		return (
 			<tbody>
 			{processes.map((process: Process) => {
-				const colorFor = this.getColorForProcess(process.pid);
 				return (
 					<tr key={process.pid}>
-						<td className="color-badge">
-							<div className="color-marker" style={{backgroundColor: colorFor}}/>
-						</td>
 						{this.state.columns.map((key: keyof Process) => {
 							return (
 								<td key={key}>{process[key]}</td>

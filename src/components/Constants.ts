@@ -3,8 +3,12 @@ import { ColumnDescriptor } from "../types/ColumnDescriptor";
 
 export class Constants {
 	static DEFAULT_SERVER_ADDRESS = "ws://localhost:8080/pe-websocket";
+	static SIMPLE_VIEW_SERIES_NAME = "CPU Usage %";
+	static SIMPLE_VIEW_CHART_TITLE = "Overall CPU Usage %";
+	static DETAILED_VIEW_CHART_TITLE = "CPU Usage % by Process Name and PID";
 	static DEFAULT_POLLING_INTERVAL = 1000;
 	static RECONNECT_DELAY = 5000;
+	static Y_AXIS_LABEL_FORMAT = "{value}%";
 
 	/**
 	 * Configuration to match Process object fields to Column names

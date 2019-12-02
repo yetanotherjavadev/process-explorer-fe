@@ -7,26 +7,33 @@ import { SeriesData } from "../../types/ChartDataTypes";
 import { ChartDataUtils } from "../../utils/ChartDataUtils";
 import { chartTheme } from "./theme/ChartTheme";
 import { Constants } from "../Constants";
-import { ProcessesBatch } from "../../types/ProcessesBatch";
+import { SystemInfo } from "../../types/SystemInfo";
+import Button from "react-bootstrap/Button";
 
 export interface ChartComponentProps {
-	processesBatch: ProcessesBatch;
+	systemInfo: SystemInfo;
 	pollingActive: boolean;
 }
 
 export interface ChartComponentState {
 	chartOptions: Options;
+	isDetailedData: boolean;
 }
 
-const CHART_TITLE = "CPU Usage By Process Name";
-const Y_AXIS_LABEL_FORMAT = "{value}%";
-
 export class ChartComponent extends Component<ChartComponentProps, ChartComponentState> {
+
+	// private fields used to store both types of series data (simple and detailed) for easy switching
+	private cpuData: SeriesData = {
+		name: Constants.SIMPLE_VIEW_SERIES_NAME,
+		data: [],
+	};
+	private detailedData: Array<SeriesData> = [];
 
 	constructor(props: ChartComponentProps) {
 		super(props);
 		Highcharts.setOptions(chartTheme);
 		this.state = {
+			isDetailedData: false,
 			chartOptions: {
 				chart: {
 					animation: false,
@@ -34,11 +41,11 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 					reflow: true,
 				},
 				title: {
-					text: CHART_TITLE,
+					text: Constants.SIMPLE_VIEW_CHART_TITLE,
 				},
 				yAxis: {
 					labels: {
-						format: Y_AXIS_LABEL_FORMAT,
+						format: Constants.Y_AXIS_LABEL_FORMAT,
 					}
 				},
 				xAxis: {
@@ -49,18 +56,7 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 				} as any,
 				tooltip: {
 					formatter: function () {
-						return "CPU Usage for <b>" + this.series.name + "</b> is <b>" + this.y + "</b>";
-					}
-				},
-				plotOptions: {
-					series: {
-						events: {
-							mouseOver: function (e: PointerEvent) {
-								// window.console.log("i'm over!", (e.target as any).userOptions.name);
-								window.console.log("i'm over!", (e.target as any));
-								// window.console.log(chart.legend);
-							},
-						}
+						return "CPU Usage for <b>" + this.series.name + "</b> is <b>" + this.y.toFixed(2) + "</b>";
 					}
 				},
 			},
@@ -71,50 +67,88 @@ export class ChartComponent extends Component<ChartComponentProps, ChartComponen
 	 * Updates current series with fresh values from props data.
 	 * If previous data was not there - creates initial values.
 	 *
-	 * @param prevSeries - series data that is currently displayed by chart
-	 * @param limit - a limiting number to trim the array of values (= max # of points of a series shown on the chart at the same time)
+	 * @param limit - a limiting number to trim the array of values (= max # of X points of a series shown on the chart at the same time)
 	 */
-	getUpdatedSeries = (prevSeries?: Array<SeriesData>, limit: number = 10): Array<SeriesData> => {
-		const newDataFromProps: Record<string, Array<number>> = ChartDataUtils.prepareDataForChart(this.props.processesBatch, !this.props.pollingActive);
+	getUpdatedSeries = (limit: number = 10): Array<SeriesData> => {
+		const prevSeries = this.detailedData;
+		const newDataFromProps: Record<string, Array<number>> = ChartDataUtils.prepareDataForChart(this.props.systemInfo, !this.props.pollingActive);
+		const newCpuDataFromProps: Array<number> = ChartDataUtils.prepareCPUDataForChart(this.props.systemInfo, !this.props.pollingActive);
 
-		let iter = 0;
-		if (prevSeries && prevSeries.length !== 0) {
-			prevSeries.forEach((seriesData: SeriesData) => {
-				if (seriesData.data && seriesData.data.length >= limit) {
-					const updatedData = seriesData.data.slice(1);
-					updatedData.push(newDataFromProps[seriesData.name]);
-					prevSeries[iter].data = updatedData;
-				} else {
-					seriesData.data.push(newDataFromProps[seriesData.name]);
+		let perCpuResult: Array<SeriesData>;
+		let cpuResult: Array<SeriesData>;
+
+		// calculate per-process CPU data
+		if (prevSeries.length !== 0) {
+			const newSeries = prevSeries.map((seriesData: SeriesData) => {
+				const newData = [...seriesData.data];
+				if (newData && newData.length >= limit) {
+					newData.shift();
 				}
-				// window.console.log(seriesData.name, prevSeries[iter].data);
-				iter++;
+				newData.push(newDataFromProps[seriesData.name]);
+				return { name: seriesData.name, data: newData };
 			});
-			return prevSeries;
+			const invalidSeries = ChartDataUtils.getInvalidKey(prevSeries, newDataFromProps);
+			if (invalidSeries) {
+				perCpuResult = ChartDataUtils.getInitialSeriesData(this.props.systemInfo);
+			}
+			perCpuResult = newSeries;
 		} else {
-			return ChartDataUtils.getInitialSeriesData(this.props.processesBatch);
+			perCpuResult = ChartDataUtils.getInitialSeriesData(this.props.systemInfo);
 		}
+
+		// calculate CPU data
+		const { data, name } = this.cpuData;
+		const newData = [...data];
+		if (newData.length >= limit) {
+			newData.shift();
+		}
+		newData.push(newCpuDataFromProps);
+		cpuResult = [{ name, data: newData }];
+
+		this.detailedData = perCpuResult;
+		this.cpuData = cpuResult[0];
+
+		return this.state.isDetailedData ? perCpuResult : cpuResult;
 	};
 
 	componentDidMount() {
-		const { chartOptions } = this.state;
 		setInterval(() => {
-			const updatedSeries = this.getUpdatedSeries(chartOptions.series as any, 20);
+			const updatedSeries = this.getUpdatedSeries(20);
 			this.setState({
 				chartOptions: {
 					series: updatedSeries,
-				}
+				},
 			} as any);
 		}, Constants.DEFAULT_POLLING_INTERVAL);
 	}
 
+	toggleDetailedData = (detailed: boolean) => {
+		const updatedSeries = this.getUpdatedSeries(20);
+		const chartTitle = detailed ? Constants.DETAILED_VIEW_CHART_TITLE : Constants.SIMPLE_VIEW_CHART_TITLE;
+		this.setState({
+			isDetailedData: detailed,
+			chartOptions: {
+				series: updatedSeries,
+				title: {
+					text: chartTitle,
+				},
+			}
+		} as any);
+	};
+
 	render() {
 		return (
-			<div className="chart-container">
-				<HighchartsReact
-					highcharts={Highcharts}
-					options={this.state.chartOptions}
-				/>
+			<div className="ChartComponent">
+				<div className="chart-container">
+					<HighchartsReact
+						highcharts={Highcharts}
+						options={this.state.chartOptions}
+					/>
+				</div>
+				<div className="button-block">
+					<Button variant="dark" active={!this.state.isDetailedData} onClick={() => this.toggleDetailedData(false)}>Simple view</Button>
+					<Button variant="dark" active={this.state.isDetailedData} onClick={() => this.toggleDetailedData(true)}>Detailed view</Button>
+				</div>
 			</div>
 		);
 	}

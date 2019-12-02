@@ -10,12 +10,12 @@ import Button from "react-bootstrap/Button";
 import "./MainComponent.css";
 import { SortingUtils } from "../../utils/SortingUtils";
 import { SortingDescriptor } from "../../types/SortingDescriptor";
-import { ProcessesBatch } from "../../types/ProcessesBatch";
+import { SystemInfo } from "../../types/SystemInfo";
 
 interface MainComponentProps {}
 
 interface MainComponentState {
-	processesBatch: ProcessesBatch;
+	systemInfo: SystemInfo;
 	filter?: string; // filter is optional and case insensitive
 	sortedBy?: SortingDescriptor;
 }
@@ -27,10 +27,16 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 	constructor(props: MainComponentProps) {
 		super(props);
 		this.state = {
-			processesBatch: {
+			systemInfo: {
 				currentTime: Date.now(),
-				processes: [],
+				trackedProcesses: [],
+				uiProcesses: [],
+				overallCpuUsage: 0.0,
 			},
+			sortedBy: {
+				key: "pid",
+				asc: true,
+			}
 		};
 	}
 
@@ -44,8 +50,7 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 				window.console.log("onConnect");
 
 				this.client.subscribe("/topic/processes", (message: IMessage) => {
-					// window.console.log(message.body);
-					this.setState({processesBatch: JSON.parse(message.body)});
+					this.setState({systemInfo: JSON.parse(message.body)});
 				});
 
 				this.client.subscribe("/topic/kill-successful", (message: IMessage) => {
@@ -59,6 +64,8 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 				this.client.subscribe("/topic/scheduled-task-process", (message: IMessage) => {
 					window.console.log(message.body); // every second data comes from server
 				});
+
+				this.startPolling(); // automatically start polling when connected
 			},
 			onDisconnect: () => {
 				window.console.log("onDisconnect");
@@ -99,10 +106,10 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 	};
 
 	getFilteredAndSortedProcesses = (): Array<Process> => {
-		const { filter, sortedBy, processesBatch: { processes } } = this.state;
-		let result = processes;
+		const { filter, sortedBy, systemInfo: { trackedProcesses } } = this.state;
+		let result = trackedProcesses;
 		if (filter && filter.length > 0) {
-			result = processes.filter((p: Process) => {
+			result = trackedProcesses.filter((p: Process) => {
 				return p.name.toLowerCase().indexOf(filter.toLowerCase()) !== -1;
 			});
 		}
@@ -143,10 +150,11 @@ class MainComponent extends Component<MainComponentProps, MainComponentState> {
 						}
 					/>
 					<ChartComponent
-						processesBatch={this.state.processesBatch}
+						systemInfo={this.state.systemInfo}
 						pollingActive={this.pollingActive}
 					/>
 				</div>
+				<footer className="main-footer"/>
 			</div>
 		);
 	}

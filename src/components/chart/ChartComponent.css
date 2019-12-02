@@ -1,8 +1,19 @@
 .ChartComponent {
-
+	padding-top: 20px;
 }
 
 .chart-container {
 	display: flex;
-	height: 400px;
+	height: 430px;
+	padding-bottom: 30px;
 }
+
+.button-block {
+	display: flex;
+	padding: 5px 20px 5px 20px;
+}
+
+.button-block > button {
+	margin: 0 5px 0 5px;
+}
+
