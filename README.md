@@ -32,6 +32,7 @@ FE:
 7) Make the Chart-related code more generic and strict.
 8) Improve the way the "tooltips" are shown
 9) Play with Chart animations - Highcharts are really powerful and deserve more respect :)
+10) Tests... Always the last thing to remember.
 
 BE: 
 1) Use another lib to grab system processes. Possibly more configurable and convenient.
@@ -40,22 +41,26 @@ Bonus: think how to override white scroll on a table with dark theme on it - it'
 
 ## Activity time tracking (both FE and BE tracking is here)
 
-FE - initial project setup (React + Typescript + github repo) - 1.5h
-	- added new websocket lib to the UI
-	- implemented polling for processes (Spring scheduler) - 1h
-	- added bootstrap table - 1h
-    - polished data fetching, added dark theme to chart, minor improvements - 3h
-    - implemented filtering and sorting for the table, updated layout, cleaned up things - 4h
-    - added sortingDescriptor, added server-side provided timestamps for X axes, minor updates - 1.5h
-    - implemented "simple view" for graph, it's possible to switch now, fixed a lot of array processing errors - 3h
-    - implemented informational tooltips, "lastTick" feature, improved UX, polished code - 3h 
+FE:
+ 1) initial project setup (React + Typescript + github repo) - 1.5h
+ 2) added new websocket lib to the UI - 1h
+ 3) implemented polling for processes (Spring scheduler) - 1h
+ 4) added bootstrap table - 1h
+ 5) polished data fetching, added dark theme to chart, minor improvements - 3h
+ 6) implemented filtering and sorting for the table, updated layout, cleaned up things - 4h
+ 7) added sortingDescriptor, added server-side provided timestamps for X axes, minor updates - 1.5h
+ 8) implemented "simple view" for graph, it's possible to switch now, fixed a lot of array processing errors - 3h
+ 9) implemented informational tooltips, "lastTick" feature, improved UX, polished code - 3h 
 
-BE - initial project setup (Spring boot + JProcess + github repo) - 1h 
-   - Spring websocket initial setup - 2h
-   - implemented process fetching - 1h
-   - implemented tracked process list and kill feature - 3h 
-   - cleaned up unused methods and improved project structure - 0.5h
-   - added server-side provided timestamps for X axes - 0.5h
-   - added overall CPU usage stat into info batch - 1h
-   - played with various logic on "tracked" and "non-tracked" processes. Decided to stay with all processes to be displayed - 3h
-   - minor improvements - 1h
+BE:
+ 1) initial project setup (Spring boot + JProcess + github repo) - 1h 
+ 2) Spring websocket initial setup - 2h
+ 3) implemented process fetching - 1h
+ 4) implemented tracked process list and kill feature - 3h 
+ 5) cleaned up unused methods and improved project structure - 0.5h
+ 6) added server-side provided timestamps for X axes - 0.5h
+ 7) added overall CPU usage stat into info batch - 1h
+ 8) played with various logic on "tracked" and "non-tracked" processes. Decided to stay with all processes to be displayed - 3h
+ 9) minor improvements (mostly cleanup) - 1h
+
+ That would mean the total time spent is 14.5h FE and 13h BE. I would say this is like 30-40% more than my initial rough estimation (2-2.5 days). 
