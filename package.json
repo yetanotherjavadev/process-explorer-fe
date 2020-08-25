@@ -11,7 +11,7 @@
     "@types/stompjs": "2.3.4",
     "@typescript-eslint/eslint-plugin": "^2.10.0",
     "bootstrap": "4.4.1",
-    "highcharts": "7.2.1",
+    "highcharts": "8.2.0",
     "highcharts-react-official": "2.2.2",
     "react": "16.9.0",
     "react-bootstrap": "1.0.0-beta.16",
